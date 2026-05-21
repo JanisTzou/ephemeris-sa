@@ -33,6 +33,10 @@ import java.util.List;
  */
 public class MoonPositionCalculator {
 
+    private static final double EARTH_EQUATORIAL_RADIUS_KM = 6378.14;
+    private static final double HORIZON_REFRACTION_DEGREES = 34.0 / 60.0;
+    private static final int RISE_SET_REFINEMENT_STEPS = 20;
+
     // Meeus first edition table 45.A Longitude and distance of the moon
     public static final int[] T45AD = new int[]{
         0, 2, 2, 0, 0, 0, 2, 2, 2, 2,
@@ -235,148 +239,70 @@ public class MoonPositionCalculator {
 
     public RiseSetTimes moonrise(Observatory obs) {
         Observatory obsReset = obs.copy();
-        obsReset.setCurrentTime(obs.getCurrentTime().withHour(0).withMinute(0).withSecond(0).withNano(0));
+        ZonedDateTime dayStart = obs.getCurrentTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-        RiseSetTimes times = new RiseSetTimes();
-        // elh is the elevation at the hour elhdone is true if elh calculated
-        List<Double> elh = new ArrayList<>(25);
-        List<Boolean> elhDone = new ArrayList<>(25);
-        List<Double> moontab = moonpos(obsReset);
-        for (int i = 0; i < 25; i++) {
-            elh.add(0.0);
-            elhDone.add(false);
-        }
+        double previousAltitude = adjustedMoonAltitude(obsReset, dayStart);
+        RiseSetTimes times = previousAltitude >= 0.0 ? new RiseSetTimes("-2", "-2") : new RiseSetTimes("-1", "-1");
+        boolean foundRise = false;
+        boolean foundSet = false;
 
-        elh.set(0, moontab.get(3));
-        elhDone.set(0, true);
-        // set the return code to allow for always up or never rises
-        if (elh.get(0) >= 0.0) {
-            times = new RiseSetTimes("-2", "-2");
-        } else {
-            times = new RiseSetTimes("-1", "-1");
-        }
+        for (int hour = 1; hour <= 24; hour++) {
+            double currentAltitude = adjustedMoonAltitude(obsReset, dayStart.plusHours(hour));
 
-        ZonedDateTime tm = obsReset.getCurrentTime();
-        obsReset.setCurrentTime(tm.withHour(0).withDayOfMonth(tm.getDayOfMonth() + 1));
-        moontab = moonpos(obsReset);
-        elh.set(24, moontab.get(3));
-        elhDone.set(24, true);
+            if (!foundRise && previousAltitude <= 0.0 && currentAltitude >= 0.0) {
+                double value = refineMoonEvent(obsReset, dayStart, hour - 1.0, hour, previousAltitude);
+                times.setRise(String.valueOf(value));
+                foundRise = true;
+            }
 
-        for (int rise = 0; rise < 2; rise++) {
-            boolean found = false;
-            int hfirst = 0;
-            int hlast = 24;
-            obsReset.setCurrentTime(tm.withMinute(0).withSecond(0));
-            // Try a binary chop on the hours to speed the search
-            while (Math.ceil((hlast - hfirst) / 2.0) > 1) {
-                int hmid = (int) (hfirst + Math.round((hlast - hfirst) / 2.0));
-                System.out.printf("rise: %s, hfirst: %s, hlast: %s\n", rise, hfirst, hlast);
-                if (!elhDone.get(hmid)) {
-                    System.out.printf("Set: %s\n", hmid);
-                    obsReset.setCurrentTime(obsReset.getCurrentTime().withHour(hmid));
-                    moontab = moonpos(obsReset);
-                    elh.set(hmid, moontab.get(3));
-                    elhDone.set(hmid, true);
-                }
+            if (!foundSet && previousAltitude >= 0.0 && currentAltitude <= 0.0) {
+                double value = refineMoonEvent(obsReset, dayStart, hour - 1.0, hour, previousAltitude);
+                times.setSet(String.valueOf(value));
+                foundSet = true;
+            }
 
-                if (((rise == 0) && (elh.get(hfirst) <= 0.0) && (elh.get(hmid) >= 0.0))
-                        || ((rise == 1) && (elh.get(hfirst) >= 0.0) && (elh.get(hmid) <= 0.0))) {
-                    hlast = hmid;
-                    found = true;
-                    System.out.println("first continue");
-                    continue;
-                }
-
-                if (((rise == 0) && (elh.get(hmid) <= 0.0) && (elh.get(hlast) >= 0.0))
-                        || ((rise == 1) && (elh.get(hmid) >= 0.0) && (elh.get(hlast) <= 0.0))) {
-                    hfirst = hmid;
-                    found = true;
-                    System.out.println("second continue");
-                    continue;
-                }
-
-                System.out.println("break");
+            previousAltitude = currentAltitude;
+            if (foundRise && foundSet) {
                 break;
-            }
-
-            // If the binary chop did not find a 1 hour interval
-            if ((hlast - hfirst) > 1) {
-                System.out.println("did not find a 1 hr interval");
-                for (int i = hfirst; i < hlast; i++) {
-                    found = false;
-                    if (!elhDone.get(i + 1)) {
-                        System.out.printf("Set: %s\n", (i + 1));
-                        obsReset.setCurrentTime(obsReset.getCurrentTime().withHour(i + 1));
-                        moontab = moonpos(obsReset);
-                        elh.set(i + 1, moontab.get(3));
-                        elhDone.set(i + 1, true);
-                    }
-
-                    if (((rise == 0) && (elh.get(i) <= 0.0) && (elh.get(i + 1) >= 0.0))
-                            || ((rise == 1) && (elh.get(i) >= 0.0) && (elh.get(i + 1) <= 0.0))) {
-                        hfirst = i;
-                        hlast = i + 1;
-                        found = true;
-                        System.out.printf("found: hfirst: %s, hlast: %s. break.\n", hfirst, hlast);
-                        break;
-                    }
-                }
-            }
-
-            // simple linear interpolation for the minutes
-            if (found) {
-                System.out.println("found: " + Arrays.toString(elh.toArray()));
-                double elfirst = elh.get(hfirst);
-                double ellast = elh.get(hlast);
-                obsReset.setCurrentTime(obsReset.getCurrentTime().withHour(hfirst).withMinute(30));
-                moontab = moonpos(obsReset);
-
-                double hf = 0.0;
-                double hl = 0.0;
-
-                if ((rise == 0) && (moontab.get(3) <= 0.0)) {
-                    hf = hfirst + 0.5;
-                    elfirst = moontab.get(3);
-                    System.out.println(" c1: " + hf);
-                }
-
-                if ((rise == 0) && (moontab.get(3) > 0.0)) {
-                    hl = hfirst + 0.5;
-                    ellast = moontab.get(3);
-                    System.out.println(" c2: " + hl);;
-                }
-
-                if ((rise == 1) && (moontab.get(3) <= 0.0)) {
-                    hl = hfirst + 0.5;
-                    ellast = moontab.get(3);
-                    System.out.println(" c3: " + hl);
-                }
-
-                if ((rise == 1) && (moontab.get(3) > 0.0)) {
-                    hf = hfirst + 0.5;
-                    elfirst = moontab.get(3);
-                    System.out.println(" c4: " + hf);
-                }
-
-                double eld = Math.abs(elfirst) + Math.abs(ellast);
-                double value = hf + (hl - hf) * Math.abs(elfirst) / eld;
-                System.out.println("eld: " + eld);
-                System.out.println("hf: " + hf);
-                System.out.println("hl: " + hl);
-
-                if (rise == 0) {
-                    System.out.println("setting rise: " + value);
-                    times.setRise(String.valueOf(value));
-                }
-
-                if (rise == 1) {
-                    System.out.println("setting set: " + value);
-                    times.setSet(String.valueOf(value));
-                }
             }
         }
 
         return times;
+    }
+
+    private double refineMoonEvent(Observatory obs, ZonedDateTime dayStart, double startHour, double endHour, double startAltitude) {
+        double lowHour = startHour;
+        double highHour = endHour;
+        double lowAltitude = startAltitude;
+
+        for (int i = 0; i < RISE_SET_REFINEMENT_STEPS; i++) {
+            double midHour = (lowHour + highHour) / 2.0;
+            double midAltitude = adjustedMoonAltitude(obs, timeAtHour(dayStart, midHour));
+            if ((lowAltitude <= 0.0 && midAltitude >= 0.0) || (lowAltitude >= 0.0 && midAltitude <= 0.0)) {
+                highHour = midHour;
+            } else {
+                lowHour = midHour;
+                lowAltitude = midAltitude;
+            }
+        }
+
+        return (lowHour + highHour) / 2.0;
+    }
+
+    private double adjustedMoonAltitude(Observatory obs, ZonedDateTime time) {
+        obs.setCurrentTime(time);
+        List<Double> moontab = moonpos(obs);
+        return moontab.get(3) - moonRiseSetAltitude(moontab.get(2));
+    }
+
+    private double moonRiseSetAltitude(double distanceKm) {
+        double horizontalParallax = MathUtils.asind(EARTH_EQUATORIAL_RADIUS_KM / distanceKm);
+        return 0.7275 * horizontalParallax - HORIZON_REFRACTION_DEGREES;
+    }
+
+    private ZonedDateTime timeAtHour(ZonedDateTime dayStart, double hour) {
+        long seconds = Math.round(hour * 3600.0);
+        return dayStart.plusSeconds(seconds);
     }
 
     public List<MoonPosition> getEphemeris(Observatory obs, ZonedDateTime startDate, ZonedDateTime endDate, int intervalMinutes) {
