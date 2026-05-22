@@ -20,6 +20,7 @@ import com.singulariti.os.ephemeris.domain.Coord3D;
 import com.singulariti.os.ephemeris.domain.Observatory;
 import com.singulariti.os.ephemeris.domain.Planet;
 import com.singulariti.os.ephemeris.domain.PlanetPosition;
+import com.singulariti.os.ephemeris.domain.RiseSetStatus;
 import com.singulariti.os.ephemeris.utils.DateTimeUtils;
 import com.singulariti.os.ephemeris.utils.FormatUtils;
 import com.singulariti.os.ephemeris.utils.MathUtils;
@@ -136,10 +137,12 @@ public class PlanetPositionCalculator {
         String az = FormatUtils.anglestring(altaz[1], false);
         String dist = String.valueOf(Math.round(radec.get(2) * 1000.0) / 1000.0);
 
+        ZonedDateTime dayStart = DateTimeUtils.observatoryDayStart(obs);
         Observatory obsReset = obs.copy();
-        obsReset.setCurrentTime(obs.getCurrentTime().withHour(12).withMinute(0).withSecond(0).withNano(0));
+        obsReset.setCurrentTime(dayStart.plusHours(12));
 
         planet_xyz = PlanetPositionCalculator.helios(planet, obsReset);
+        earth_xyz = PlanetPositionCalculator.helios(earth, obsReset);
         double lst = DateTimeUtils.local_sidereal(obsReset);
         radec = PlanetPositionCalculator.radecr(planet_xyz, earth_xyz, obsReset);
 
@@ -158,34 +161,20 @@ public class PlanetPositionCalculator {
         double cosLHA = (MathUtils.sind(-0.583) - MathUtils.sind(obs.getLatitude()) * MathUtils.sind(dblDec))
                 / (MathUtils.cosd(obs.getLatitude()) * MathUtils.cosd(dblDec));
 
-        String rise = "";
-        String transit = "";
-        String set = "";
+        ZonedDateTime rise = null;
+        ZonedDateTime transit = DateTimeUtils.timeAtHour(dayStart, UTplanet);
+        ZonedDateTime set = null;
+        RiseSetStatus riseSetStatus = RiseSetStatus.NORMAL;
 
         if (cosLHA > 1.0) {
-            rise = "----";
-            transit = "----";
-            set = "----";
+            riseSetStatus = RiseSetStatus.ALWAYS_BELOW_HORIZON;
         } else if (cosLHA < -1.0) {
-            rise = "++++";
-            transit = "++++";
-            set = "++++";
+            riseSetStatus = RiseSetStatus.ALWAYS_ABOVE_HORIZON;
         } else {
             // Print rise/set times allowing for not today.
             double lha = MathUtils.acosd(cosLHA) / 15.04107;
-            if ((UTplanet - lha) < 0.0) {
-                rise = FormatUtils.hmstring(24.0 + UTplanet - lha);
-            } else {
-                rise = FormatUtils.hmstring(UTplanet - lha);
-            }
-
-            transit = FormatUtils.hmstring(UTplanet);
-
-            if ((UTplanet + lha) > 24.0) {
-                set = FormatUtils.hmstring(UTplanet + lha - 24.0);
-            } else {
-                set = FormatUtils.hmstring(UTplanet + lha);
-            }
+            rise = DateTimeUtils.timeAtHour(dayStart, UTplanet - lha);
+            set = DateTimeUtils.timeAtHour(dayStart, UTplanet + lha);
         }
 
         PlanetPosition eph = new PlanetPosition();
@@ -198,9 +187,15 @@ public class PlanetPositionCalculator {
         eph.setRise(rise);
         eph.setTransit(transit);
         eph.setSet(set);
+        eph.setRiseSetStatus(riseSetStatus);
         eph.setDate(obs.getCurrentTime());
 
         return eph;
+    }
+
+    public PlanetPosition getPosition(Planet planet, Observatory obs, ZonedDateTime time) {
+        obs.setCurrentTime(time);
+        return getPosition(planet, obs);
     }
 
 }

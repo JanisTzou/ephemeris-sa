@@ -19,6 +19,7 @@ package com.singulariti.os.ephemeris;
 import com.singulariti.os.ephemeris.domain.MoonPosition;
 import com.singulariti.os.ephemeris.domain.Observatory;
 import com.singulariti.os.ephemeris.domain.RiseSetTimes;
+import com.singulariti.os.ephemeris.domain.RiseSetStatus;
 import com.singulariti.os.ephemeris.utils.DateTimeUtils;
 import com.singulariti.os.ephemeris.utils.FormatUtils;
 import com.singulariti.os.ephemeris.utils.MathUtils;
@@ -239,10 +240,11 @@ public class MoonPositionCalculator {
 
     public RiseSetTimes moonrise(Observatory obs) {
         Observatory obsReset = obs.copy();
-        ZonedDateTime dayStart = obs.getCurrentTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime dayStart = DateTimeUtils.observatoryDayStart(obs);
 
         double previousAltitude = adjustedMoonAltitude(obsReset, dayStart);
-        RiseSetTimes times = previousAltitude >= 0.0 ? new RiseSetTimes("-2", "-2") : new RiseSetTimes("-1", "-1");
+        RiseSetTimes times = new RiseSetTimes(null, null,
+                previousAltitude >= 0.0 ? RiseSetStatus.ALWAYS_ABOVE_HORIZON : RiseSetStatus.ALWAYS_BELOW_HORIZON);
         boolean foundRise = false;
         boolean foundSet = false;
 
@@ -251,13 +253,13 @@ public class MoonPositionCalculator {
 
             if (!foundRise && previousAltitude <= 0.0 && currentAltitude >= 0.0) {
                 double value = refineMoonEvent(obsReset, dayStart, hour - 1.0, hour, previousAltitude);
-                times.setRise(String.valueOf(value));
+                times.setRise(DateTimeUtils.timeAtHour(dayStart, value));
                 foundRise = true;
             }
 
             if (!foundSet && previousAltitude >= 0.0 && currentAltitude <= 0.0) {
                 double value = refineMoonEvent(obsReset, dayStart, hour - 1.0, hour, previousAltitude);
-                times.setSet(String.valueOf(value));
+                times.setSet(DateTimeUtils.timeAtHour(dayStart, value));
                 foundSet = true;
             }
 
@@ -265,6 +267,14 @@ public class MoonPositionCalculator {
             if (foundRise && foundSet) {
                 break;
             }
+        }
+
+        if (foundRise && foundSet) {
+            times.setStatus(RiseSetStatus.NORMAL);
+        } else if (foundRise) {
+            times.setStatus(RiseSetStatus.NO_SET);
+        } else if (foundSet) {
+            times.setStatus(RiseSetStatus.NO_RISE);
         }
 
         return times;
@@ -277,7 +287,7 @@ public class MoonPositionCalculator {
 
         for (int i = 0; i < RISE_SET_REFINEMENT_STEPS; i++) {
             double midHour = (lowHour + highHour) / 2.0;
-            double midAltitude = adjustedMoonAltitude(obs, timeAtHour(dayStart, midHour));
+            double midAltitude = adjustedMoonAltitude(obs, DateTimeUtils.timeAtHour(dayStart, midHour));
             if ((lowAltitude <= 0.0 && midAltitude >= 0.0) || (lowAltitude >= 0.0 && midAltitude <= 0.0)) {
                 highHour = midHour;
             } else {
@@ -298,11 +308,6 @@ public class MoonPositionCalculator {
     private double moonRiseSetAltitude(double distanceKm) {
         double horizontalParallax = MathUtils.asind(EARTH_EQUATORIAL_RADIUS_KM / distanceKm);
         return 0.7275 * horizontalParallax - HORIZON_REFRACTION_DEGREES;
-    }
-
-    private ZonedDateTime timeAtHour(ZonedDateTime dayStart, double hour) {
-        long seconds = Math.round(hour * 3600.0);
-        return dayStart.plusSeconds(seconds);
     }
 
     public List<MoonPosition> getEphemeris(Observatory obs, ZonedDateTime startDate, ZonedDateTime endDate, int intervalMinutes) {
@@ -350,7 +355,13 @@ public class MoonPositionCalculator {
         eph.setIlluminatedPercentage(ip);
         eph.setRiseTime(riseSetTimes.getRise());
         eph.setSetTime(riseSetTimes.getSet());
+        eph.setRiseSetStatus(riseSetTimes.getStatus());
 
         return eph;
+    }
+
+    public MoonPosition getPosition(Observatory obs, ZonedDateTime time) {
+        obs.setCurrentTime(time);
+        return getPosition(obs);
     }
 }

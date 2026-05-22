@@ -20,19 +20,18 @@ import com.singulariti.os.ephemeris.domain.Coord3D;
 import com.singulariti.os.ephemeris.domain.Observatory;
 import com.singulariti.os.ephemeris.domain.Planet;
 import com.singulariti.os.ephemeris.domain.RiseSetTimes;
+import com.singulariti.os.ephemeris.domain.RiseSetStatus;
 import com.singulariti.os.ephemeris.domain.SunPosition;
 import com.singulariti.os.ephemeris.utils.DateTimeUtils;
 import com.singulariti.os.ephemeris.utils.FormatUtils;
 import com.singulariti.os.ephemeris.utils.MathUtils;
 import com.singulariti.os.ephemeris.utils.PlanetCatalog;
 import static com.singulariti.os.ephemeris.utils.DateTimeUtils.jd;
-import static com.singulariti.os.ephemeris.utils.FormatUtils.hmstring;
 import static com.singulariti.os.ephemeris.utils.MathUtils.cosd;
 import static com.singulariti.os.ephemeris.utils.MathUtils.rev;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  *
@@ -108,9 +107,9 @@ public class SunPositionCalculator {
 
     public RiseSetTimes sunrise(Observatory obs, double twilight, Planet earth) {
         Observatory obscopy = obs.copy();
-        RiseSetTimes riseset = new RiseSetTimes("", "");
-        ZonedDateTime obsDT = obscopy.getCurrentTime();
-        obscopy.setCurrentTime(obsDT.withHour(12).withMinute(0).withSecond(0).withNano(0));
+        RiseSetTimes riseset = new RiseSetTimes();
+        ZonedDateTime dayStart = DateTimeUtils.observatoryDayStart(obs);
+        obscopy.setCurrentTime(dayStart.plusHours(12));
         double lst = DateTimeUtils.local_sidereal(obscopy);
         Coord3D earth_xyz = PlanetPositionCalculator.helios(earth, obscopy);
         Coord3D sun_xyz = new Coord3D(0.0, 0.0, 0.0);
@@ -128,24 +127,15 @@ public class SunPositionCalculator {
                 / (MathUtils.cosd(obs.getLatitude()) * MathUtils.cosd(radec.get(1)));
         // Check for midnight sun and midday night.
         if (cosLHA > 1.0) {
-            riseset.setRise("----");
-            riseset.setSet("----");
+            riseset.setStatus(RiseSetStatus.ALWAYS_BELOW_HORIZON);
         } else if (cosLHA < -1.0) {
-            riseset.setRise("++++");
-            riseset.setSet("++++");
+            riseset.setStatus(RiseSetStatus.ALWAYS_ABOVE_HORIZON);
         } else {
             // rise/set times allowing for not today.
             double lha = MathUtils.acosd(cosLHA) / 15.0;
-            if ((UTsun - lha) < 0.0) {
-                riseset.setRise(hmstring(24.0 + UTsun - lha));
-            } else {
-                riseset.setRise(hmstring(UTsun - lha));
-            }
-            if ((UTsun + lha) > 24.0) {
-                riseset.setSet(hmstring(UTsun + lha - 24.0));
-            } else {
-                riseset.setSet(hmstring(UTsun + lha));
-            }
+            riseset.setRise(DateTimeUtils.timeAtHour(dayStart, UTsun - lha));
+            riseset.setSet(DateTimeUtils.timeAtHour(dayStart, UTsun + lha));
+            riseset.setStatus(RiseSetStatus.NORMAL);
         }
 
         return riseset;
@@ -200,14 +190,23 @@ public class SunPositionCalculator {
         eph.setEarthDistance(earthDist);
         eph.setRiseTime(riseSetTimes.getRise());
         eph.setSetTime(riseSetTimes.getSet());
+        eph.setRiseSetStatus(riseSetTimes.getStatus());
         eph.setCivilDawnTime(civilRiseSetTimes.getRise());
         eph.setCivilDuskTime(civilRiseSetTimes.getSet());
+        eph.setCivilTwilightStatus(civilRiseSetTimes.getStatus());
         eph.setNauticalDawnTime(nauticalRiseSetTimes.getRise());
         eph.setNauticalDuskTime(nauticalRiseSetTimes.getSet());
+        eph.setNauticalTwilightStatus(nauticalRiseSetTimes.getStatus());
         eph.setAstronomicalDawnTime(astronomicalRiseSetTimes.getRise());
         eph.setAstronomicalDuskTime(astronomicalRiseSetTimes.getSet());
+        eph.setAstronomicalTwilightStatus(astronomicalRiseSetTimes.getStatus());
 
         return eph;
+    }
+
+    public SunPosition getPosition(Observatory obs, ZonedDateTime time) {
+        obs.setCurrentTime(time);
+        return getPosition(obs);
     }
 
 }

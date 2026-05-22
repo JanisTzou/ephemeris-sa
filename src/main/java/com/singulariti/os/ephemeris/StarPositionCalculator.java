@@ -83,4 +83,9 @@ public class StarPositionCalculator {
         return eph;
     }
 
+    public StarPosition getPosition(Star star, Observatory obs, ZonedDateTime time) {
+        obs.setCurrentTime(time);
+        return getPosition(star, obs);
+    }
+
 }

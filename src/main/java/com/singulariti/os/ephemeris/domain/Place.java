@@ -150,10 +150,12 @@ public class Place {
         this.longitudePole = longitudePole;
     }
 
+    @Deprecated
     public int getTimeDifferenceGMTMinutes() {
         return timeDifferenceGMTMinutes;
     }
 
+    @Deprecated
     public void setTimeDifferenceGMTMinutes(int timeDifferenceGMTMinutes) {
         this.timeDifferenceGMTMinutes = timeDifferenceGMTMinutes;
     }

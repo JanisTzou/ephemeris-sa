@@ -139,7 +139,7 @@ public class StarPosition {
 
     @Override
     public String toString() {
-        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(date);
+        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss z").format(date);
         //date ra dec alt az earthdist risetime settime civildawn civildusk nautdawn nautdusk astdawn astdusk
         String str = String.format("%20s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s |",
                 d, star, constellation, name, ra, dec, altitude, azimuth, mg, type, spectralClass);

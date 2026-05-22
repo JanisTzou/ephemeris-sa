@@ -31,7 +31,6 @@ import com.singulariti.os.ephemeris.utils.StarCatalog;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.TimeZone;
 
 /**
@@ -98,10 +97,10 @@ public class Application {
         String strLat = FormatUtils.llstring(latitude);
         String strLng = FormatUtils.llstring(longitude);
 
-        ZonedDateTime start = ZonedDateTime.of(2017, 11, 7, 0, 0, 0, 0, ZoneId.of("UTC"));
+        ZonedDateTime start = ZonedDateTime.of(2017, 11, 7, 0, 0, 0, 0, ZoneId.of("Asia/Kolkata"));
         ZonedDateTime end = start.plusHours(1);
 
-        Place place = new Place("Hassan", latitude, Pole.NORTH, longitude, Pole.EAST, TimeZone.getTimeZone("Asia/Calcutta"), "", "");
+        Place place = new Place("Hassan", latitude, Pole.NORTH, longitude, Pole.EAST, TimeZone.getTimeZone("Asia/Kolkata"), "", "");
         Observatory obs = new Observatory(place, start);
 
         System.out.println("Latitude: " + obs.getLatitude() + " - " + strLat);

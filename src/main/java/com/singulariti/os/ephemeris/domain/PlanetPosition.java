@@ -32,9 +32,10 @@ public class PlanetPosition {
     private String altitude;
     private String azimuth;
     private String distance;
-    private String rise;
-    private String transit;
-    private String set;
+    private ZonedDateTime rise;
+    private ZonedDateTime transit;
+    private ZonedDateTime set;
+    private RiseSetStatus riseSetStatus;
 
     public PlanetPosition() {
     }
@@ -95,37 +96,52 @@ public class PlanetPosition {
         this.distance = distance;
     }
 
-    public String getRise() {
+    public ZonedDateTime getRise() {
         return rise;
     }
 
-    public void setRise(String rise) {
+    public void setRise(ZonedDateTime rise) {
         this.rise = rise;
     }
 
-    public String getTransit() {
+    public ZonedDateTime getTransit() {
         return transit;
     }
 
-    public void setTransit(String transit) {
+    public void setTransit(ZonedDateTime transit) {
         this.transit = transit;
     }
 
-    public String getSet() {
+    public ZonedDateTime getSet() {
         return set;
     }
 
-    public void setSet(String set) {
+    public void setSet(ZonedDateTime set) {
         this.set = set;
+    }
+
+    public RiseSetStatus getRiseSetStatus() {
+        return riseSetStatus;
+    }
+
+    public void setRiseSetStatus(RiseSetStatus riseSetStatus) {
+        this.riseSetStatus = riseSetStatus;
     }
 
     @Override
     public String toString() {
-        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(date);
+        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss z").format(date);
         //date ra dec alt az earthdist risetime settime civildawn civildusk nautdawn nautdusk astdawn astdusk
         String str = String.format("%20s | %15s | %10s | %15s | %15s | %15s | %15s | %15s | %15s |",
-                d, ra, dec, altitude, azimuth, distance, rise, transit, set);
+                d, ra, dec, altitude, azimuth, distance, formatEvent(rise), formatEvent(transit), formatEvent(set));
         return str;
+    }
+
+    private String formatEvent(ZonedDateTime eventTime) {
+        if (eventTime != null) {
+            return DateTimeFormatter.ofPattern("dd-MM HH:mm z").format(eventTime);
+        }
+        return riseSetStatus == null ? "" : riseSetStatus.name();
     }
 
     public static String header() {

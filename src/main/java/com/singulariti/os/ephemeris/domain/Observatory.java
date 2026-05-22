@@ -72,6 +72,7 @@ public class Observatory {
         return currentTime.getSecond();
     }
 
+    @Deprecated
     public int getTimeDifferenceGMTMinutes() {
         return this.location.getTimeDifferenceGMTMinutes();
     }

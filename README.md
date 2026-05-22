@@ -5,7 +5,8 @@ This version is more or less an exact port of the original (specifically the cal
 Jean Meeus' calculations). This version is being provided only as a library and so does not include a front-end.
 
 The code provides calculators for determining the positions of the Sun, Moon, Planets and several stars as viewed from 
-a particular position on Earth.
+a particular position on Earth. Dates and event times use `ZonedDateTime`; rise, set, transit and twilight events are
+returned in the observatory's time zone.
 
 ### Github repo of the JS version
 
@@ -33,9 +34,10 @@ The location on Earth from where you want to view the astronomical body
 double latitude = 13.0068;
 double longitude = 76.0996;
 
-ZonedDateTime time = ZonedDateTime.of(2017, 11, 7, 0, 0, 0, 0, ZoneId.of("UTC")); //Date and time in UTC
+ZoneId observatoryZone = ZoneId.of("Asia/Kolkata");
+ZonedDateTime time = ZonedDateTime.of(2017, 11, 7, 0, 0, 0, 0, observatoryZone);
 
-Place place = new Place("Hassan", latitude, Pole.NORTH, longitude, Pole.EAST, TimeZone.getTimeZone("Asia/Calcutta"), "", "");
+Place place = new Place("Hassan", latitude, Pole.NORTH, longitude, Pole.EAST, TimeZone.getTimeZone("Asia/Kolkata"), "", "");
 Observatory hassan = new Observatory(place, time); //observatory is a place at a specific time
 
 ~~~~
@@ -50,8 +52,9 @@ Calculating position of the sun as viewed from the Observatory
 SunPositionCalculator solarCalc = new SunPositionCalculator();
 SunPosition sunPosition = solarCalc.getPosition(hassan);
 
-sunPosition.getRiseTime(); //Rise time
-sunPosition.getSetTime(); //Set time
+sunPosition.getRiseTime(); //ZonedDateTime rise time in the observatory zone
+sunPosition.getSetTime(); //ZonedDateTime set time in the observatory zone
+sunPosition.getRiseSetStatus(); //Status for normal or no-event cases
 sunPosition.getAzimuth(); //Azimuth
 sunPosition.getAltitude(); //Elevation
 
@@ -62,7 +65,7 @@ There's a convenience method to generate the Ephemeris for a period.
 ~~~~
 
 int timeIntervalInMinutes = 10; //Positions to be calculated every 10 minutes from the start time
-ZonedDateTime anotherTime = ZonedDateTime.of(2017, 11, 8, 0, 0, 0, 0, ZoneId.of("UTC")); //Date and time in UTC
+ZonedDateTime anotherTime = ZonedDateTime.of(2017, 11, 8, 0, 0, 0, 0, observatoryZone);
 List<SunPosition> ephemerides = sun.getEphemeris(obs, time, anotherTime, timeIntervalInMinutes);
 
 ~~~~

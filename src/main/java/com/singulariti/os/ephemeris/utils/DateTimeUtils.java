@@ -17,6 +17,9 @@
 package com.singulariti.os.ephemeris.utils;
 
 import com.singulariti.os.ephemeris.domain.Observatory;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -76,9 +79,23 @@ public class DateTimeUtils {
     }
 
     public static double jd(Observatory obs) {
-        double jd0 = jd0(obs.getFullYear(), obs.getMonth(), obs.getDate());
-        jd0 += (obs.getHours() + ((obs.getMinutes() + obs.getTimeDifferenceGMTMinutes()) / 60.0) + (obs.getSeconds() / 3600.0)) / 24;
-        return jd0;
+        ZonedDateTime utc = obs.getCurrentTime().withZoneSameInstant(ZoneOffset.UTC);
+        double seconds = utc.toEpochSecond() + (utc.getNano() / 1000000000.0);
+        return 2440587.5 + (seconds / 86400.0);
+    }
+
+    public static ZoneId observatoryZone(Observatory obs) {
+        return obs.getLocation().getTimeZone().toZoneId();
+    }
+
+    public static ZonedDateTime observatoryDayStart(Observatory obs) {
+        ZoneId zone = observatoryZone(obs);
+        return obs.getCurrentTime().withZoneSameInstant(zone).toLocalDate().atStartOfDay(zone);
+    }
+
+    public static ZonedDateTime timeAtHour(ZonedDateTime dayStart, double hour) {
+        long seconds = Math.round(hour * 3600.0);
+        return dayStart.toLocalDateTime().plusSeconds(seconds).atZone(dayStart.getZone());
     }
 
     public static double jd0(int year, int month, int day) {
@@ -170,8 +187,9 @@ public class DateTimeUtils {
     }
 
     public static double local_sidereal(Observatory obs) {
-        double res = g_sidereal(obs.getFullYear(), obs.getMonth(), obs.getDate());
-        res += 1.00273790935 * (obs.getHours() + (obs.getMinutes() + obs.getTimeDifferenceGMTMinutes() + (obs.getSeconds() / 60.0)) / 60.0);
+        ZonedDateTime utc = obs.getCurrentTime().withZoneSameInstant(ZoneOffset.UTC);
+        double res = g_sidereal(utc.getYear(), utc.getMonthValue(), utc.getDayOfMonth());
+        res += 1.00273790935 * (utc.getHour() + (utc.getMinute() + ((utc.getSecond() + utc.getNano() / 1000000000.0) / 60.0)) / 60.0);
         res -= obs.getLongitude() / 15.0;
 
         while (res < 0) {

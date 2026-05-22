@@ -16,6 +16,7 @@
  */
 package com.singulariti.os.ephemeris.domain;
 
+import java.time.ZonedDateTime;
 import java.util.Objects;
 
 /**
@@ -24,31 +25,46 @@ import java.util.Objects;
  */
 public class RiseSetTimes {
 
-    private String rise;
-    private String set;
+    private ZonedDateTime rise;
+    private ZonedDateTime set;
+    private RiseSetStatus status;
 
     public RiseSetTimes() {
+        this(null, null, RiseSetStatus.NORMAL);
     }
 
-    public RiseSetTimes(String rise, String set) {
+    public RiseSetTimes(ZonedDateTime rise, ZonedDateTime set) {
+        this(rise, set, RiseSetStatus.NORMAL);
+    }
+
+    public RiseSetTimes(ZonedDateTime rise, ZonedDateTime set, RiseSetStatus status) {
         this.rise = rise;
         this.set = set;
+        this.status = status;
     }
 
-    public String getRise() {
+    public ZonedDateTime getRise() {
         return rise;
     }
 
-    public void setRise(String rise) {
+    public void setRise(ZonedDateTime rise) {
         this.rise = rise;
     }
 
-    public String getSet() {
+    public ZonedDateTime getSet() {
         return set;
     }
 
-    public void setSet(String set) {
+    public void setSet(ZonedDateTime set) {
         this.set = set;
+    }
+
+    public RiseSetStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RiseSetStatus status) {
+        this.status = status;
     }
 
     @Override
@@ -56,6 +72,7 @@ public class RiseSetTimes {
         int hash = 7;
         hash = 97 * hash + Objects.hashCode(this.rise);
         hash = 97 * hash + Objects.hashCode(this.set);
+        hash = 97 * hash + Objects.hashCode(this.status);
         return hash;
     }
 
@@ -75,6 +92,9 @@ public class RiseSetTimes {
             return false;
         }
         if (!Objects.equals(this.set, other.set)) {
+            return false;
+        }
+        if (this.status != other.status) {
             return false;
         }
         return true;

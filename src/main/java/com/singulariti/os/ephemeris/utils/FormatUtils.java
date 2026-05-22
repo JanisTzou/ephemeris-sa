@@ -18,7 +18,8 @@
 package com.singulariti.os.ephemeris.utils;
 
 import com.singulariti.os.ephemeris.domain.Observatory;
-import java.util.Date;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 /**
  *
@@ -38,75 +39,15 @@ public class FormatUtils {
     }
 
     public static String UTString(Observatory obs) {
-        int hours = obs.getHours();
-        int minutes = obs.getMinutes();
-        int seconds = obs.getSeconds();
-        minutes += obs.getTimeDifferenceGMTMinutes();
-        hours += Math.floor(minutes / 60.0);
-
-        int min = MathUtils.intr(minutes - Math.floor(minutes / 60.0) * 60);
-
-        while (hours > 24) {
-            hours -= 24;
-        }
-
-        while (hours < 0) {
-            hours += 24;
-        }
-
-        String timestr = ((hours < 10) ? "0" : "") + hours;
-        timestr += ((min < 10) ? ":0" : ":") + min;
-        timestr += ((seconds < 10) ? ":0" : ":") + seconds;
-        return timestr;
+        return DateTimeFormatter.ofPattern("HH:mm:ss").format(obs.getCurrentTime().withZoneSameInstant(ZoneOffset.UTC));
     }
 
     public static String timestring(Observatory obs, boolean local) {
-        String timeStr = "";
-        double hours = obs.getHours();
-        double minutes = obs.getMinutes();
-        double seconds = obs.getSeconds();
-
         if (local) {
-            // Correct for zone time including DST
-            minutes += obs.getTimeDifferenceGMTMinutes();
-            // correct for longitude to nearest second
-            seconds = Math.round(seconds - 240 * obs.getLongitude());
-            while (seconds < 0) {
-                seconds += 60;
-                minutes -= 1;
-            }
-
-            while (seconds >= 60) {
-                seconds -= 60;
-                minutes += 1;
-            }
-
-            // Put the daylight saving correction back
-            minutes -= DateTimeUtils.checkdst(obs, new Date());
-            while (minutes < 0) {
-                minutes += 60;
-                hours -= 1;
-            }
-
-            while (minutes >= 60) {
-                minutes -= 60;
-                hours += 1;
-            }
-
-            while (hours > 24) {
-                hours -= 24;
-            }
-
-            while (hours < 0) {
-                hours += 24;
-            }
+            return DateTimeFormatter.ofPattern("HH:mm:ss")
+                    .format(obs.getCurrentTime().withZoneSameInstant(DateTimeUtils.observatoryZone(obs)));
         }
-
-        timeStr = ((hours < 10) ? "0" : "") + MathUtils.intr(hours);
-        timeStr += ((minutes < 10) ? ":0" : ":") + MathUtils.intr(minutes);
-        timeStr += ((seconds < 10) ? ":0" : ":") + MathUtils.intr(seconds);
-
-        return timeStr;
+        return DateTimeFormatter.ofPattern("HH:mm:ss").format(obs.getCurrentTime());
     }
 
     public static String hmsstring(double t) {

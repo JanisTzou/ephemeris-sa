@@ -32,14 +32,18 @@ public class SunPosition {
     private String altitude;
     private String azimuth;
     private String earthDistance;
-    private String riseTime;
-    private String setTime;
-    private String civilDawnTime;
-    private String civilDuskTime;
-    private String nauticalDawnTime;
-    private String nauticalDuskTime;
-    private String astronomicalDawnTime;
-    private String astronomicalDuskTime;
+    private ZonedDateTime riseTime;
+    private ZonedDateTime setTime;
+    private ZonedDateTime civilDawnTime;
+    private ZonedDateTime civilDuskTime;
+    private ZonedDateTime nauticalDawnTime;
+    private ZonedDateTime nauticalDuskTime;
+    private ZonedDateTime astronomicalDawnTime;
+    private ZonedDateTime astronomicalDuskTime;
+    private RiseSetStatus riseSetStatus;
+    private RiseSetStatus civilTwilightStatus;
+    private RiseSetStatus nauticalTwilightStatus;
+    private RiseSetStatus astronomicalTwilightStatus;
     private String dstCorrected;
 
     public SunPosition() {
@@ -101,68 +105,100 @@ public class SunPosition {
         this.earthDistance = earthDistance;
     }
 
-    public String getRiseTime() {
+    public ZonedDateTime getRiseTime() {
         return riseTime;
     }
 
-    public void setRiseTime(String riseTime) {
+    public void setRiseTime(ZonedDateTime riseTime) {
         this.riseTime = riseTime;
     }
 
-    public String getSetTime() {
+    public ZonedDateTime getSetTime() {
         return setTime;
     }
 
-    public void setSetTime(String setTime) {
+    public void setSetTime(ZonedDateTime setTime) {
         this.setTime = setTime;
     }
 
-    public String getCivilDawnTime() {
+    public ZonedDateTime getCivilDawnTime() {
         return civilDawnTime;
     }
 
-    public void setCivilDawnTime(String civilDawnTime) {
+    public void setCivilDawnTime(ZonedDateTime civilDawnTime) {
         this.civilDawnTime = civilDawnTime;
     }
 
-    public String getCivilDuskTime() {
+    public ZonedDateTime getCivilDuskTime() {
         return civilDuskTime;
     }
 
-    public void setCivilDuskTime(String civilDuskTime) {
+    public void setCivilDuskTime(ZonedDateTime civilDuskTime) {
         this.civilDuskTime = civilDuskTime;
     }
 
-    public String getNauticalDawnTime() {
+    public ZonedDateTime getNauticalDawnTime() {
         return nauticalDawnTime;
     }
 
-    public void setNauticalDawnTime(String nauticalDawnTime) {
+    public void setNauticalDawnTime(ZonedDateTime nauticalDawnTime) {
         this.nauticalDawnTime = nauticalDawnTime;
     }
 
-    public String getNauticalDuskTime() {
+    public ZonedDateTime getNauticalDuskTime() {
         return nauticalDuskTime;
     }
 
-    public void setNauticalDuskTime(String nauticalDuskTime) {
+    public void setNauticalDuskTime(ZonedDateTime nauticalDuskTime) {
         this.nauticalDuskTime = nauticalDuskTime;
     }
 
-    public String getAstronomicalDawnTime() {
+    public ZonedDateTime getAstronomicalDawnTime() {
         return astronomicalDawnTime;
     }
 
-    public void setAstronomicalDawnTime(String astronomicalDawnTime) {
+    public void setAstronomicalDawnTime(ZonedDateTime astronomicalDawnTime) {
         this.astronomicalDawnTime = astronomicalDawnTime;
     }
 
-    public String getAstronomicalDuskTime() {
+    public ZonedDateTime getAstronomicalDuskTime() {
         return astronomicalDuskTime;
     }
 
-    public void setAstronomicalDuskTime(String astronomicalDuskTime) {
+    public void setAstronomicalDuskTime(ZonedDateTime astronomicalDuskTime) {
         this.astronomicalDuskTime = astronomicalDuskTime;
+    }
+
+    public RiseSetStatus getRiseSetStatus() {
+        return riseSetStatus;
+    }
+
+    public void setRiseSetStatus(RiseSetStatus riseSetStatus) {
+        this.riseSetStatus = riseSetStatus;
+    }
+
+    public RiseSetStatus getCivilTwilightStatus() {
+        return civilTwilightStatus;
+    }
+
+    public void setCivilTwilightStatus(RiseSetStatus civilTwilightStatus) {
+        this.civilTwilightStatus = civilTwilightStatus;
+    }
+
+    public RiseSetStatus getNauticalTwilightStatus() {
+        return nauticalTwilightStatus;
+    }
+
+    public void setNauticalTwilightStatus(RiseSetStatus nauticalTwilightStatus) {
+        this.nauticalTwilightStatus = nauticalTwilightStatus;
+    }
+
+    public RiseSetStatus getAstronomicalTwilightStatus() {
+        return astronomicalTwilightStatus;
+    }
+
+    public void setAstronomicalTwilightStatus(RiseSetStatus astronomicalTwilightStatus) {
+        this.astronomicalTwilightStatus = astronomicalTwilightStatus;
     }
 
     public String getDstCorrected() {
@@ -175,11 +211,18 @@ public class SunPosition {
 
     @Override
     public String toString() {
-        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss").format(date);
+        String d = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss z").format(date);
         //date ra dec alt az earthdist risetime settime civildawn civildusk nautdawn nautdusk astdawn astdusk
         String str = String.format("%20s | %15s | %10s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s |",
-                d, ra, dec, altitude, azimuth, earthDistance, riseTime, setTime, civilDawnTime, civilDuskTime, nauticalDawnTime, nauticalDuskTime, astronomicalDawnTime, astronomicalDuskTime);
+                d, ra, dec, altitude, azimuth, earthDistance, formatEvent(riseTime, riseSetStatus), formatEvent(setTime, riseSetStatus), formatEvent(civilDawnTime, civilTwilightStatus), formatEvent(civilDuskTime, civilTwilightStatus), formatEvent(nauticalDawnTime, nauticalTwilightStatus), formatEvent(nauticalDuskTime, nauticalTwilightStatus), formatEvent(astronomicalDawnTime, astronomicalTwilightStatus), formatEvent(astronomicalDuskTime, astronomicalTwilightStatus));
         return str;
+    }
+
+    private String formatEvent(ZonedDateTime eventTime, RiseSetStatus status) {
+        if (eventTime != null) {
+            return DateTimeFormatter.ofPattern("dd-MM HH:mm z").format(eventTime);
+        }
+        return status == null ? "" : status.name();
     }
 
     public static String header() {
