@@ -20,6 +20,32 @@ returned in the observatory's time zone.
 
 mvn clean package
 
+# Testing
+
+Run the full test suite locally with:
+
+```bash
+mvn test
+```
+
+Generate a local coverage report with:
+
+```bash
+mvn verify
+```
+
+The JaCoCo HTML report is written to `target/site/jacoco/index.html` after a successful `verify` run.
+
+## Contributor Notes
+
+Tests in this project are intended to lock down public behavior without changing the astronomy algorithms.
+
+- Prefer deterministic tests with fixed dates, times, and observatory locations.
+- Test public APIs and observable contracts before internal implementation details.
+- Use exact assertions for stable formatting and lookup behavior, and tolerances for numeric calculations where needed.
+- Favor small unit tests for utilities and targeted integration-style tests for calculators.
+- Keep coverage reporting informational for now; no minimum threshold is enforced.
+
 # Usage
 
 Sample code below shows how you can use each of the calculators to generate the Ephemeris.

@@ -185,7 +185,10 @@ public class Place {
     }
 
     public Place copy() {
-        return new Place(name, latitudeCtorArg, latitudePole, longitudeCtorArg, longitudePole, timeZone, daylightSavingsStart, daylightSavingsEnd);
+        Place copy = new Place(name, 0, latitudePole, 0, longitudePole, timeZone, daylightSavingsStart, daylightSavingsEnd);
+        copy.setLatitude(latitude);
+        copy.setLongitude(longitude);
+        return copy;
     }
 
 }
