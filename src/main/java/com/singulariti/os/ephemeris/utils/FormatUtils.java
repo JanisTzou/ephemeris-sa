@@ -251,7 +251,12 @@ public class FormatUtils {
 
         double longd = Math.abs(obs.getLongitude());
         int longdi = MathUtils.intr(Math.floor(longd));
-        sname += ((longdi < 10) ? "0" : "") + longdi;
+        if (longdi < 10) {
+            sname += "00";
+        } else if (longdi < 100) {
+            sname += "0";
+        }
+        sname += longdi;
 
         double longm = 60 * (longd - longdi);
         int longmi = MathUtils.intr(Math.floor(longm));

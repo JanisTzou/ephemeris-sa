@@ -1,0 +1,29 @@
+plugins {
+    id 'application'
+}
+
+group = 'com.singulariti.os'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+}
+
+application {
+    mainClass = 'com.singulariti.os.ephemeris.Application'
+}
+
+tasks.withType(Test).configureEach {
+    testLogging {
+        events 'failed'
+    }
+}

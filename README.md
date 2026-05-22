@@ -18,7 +18,15 @@ returned in the observatory's time zone.
 
 # Building the code
 
-mvn clean package
+./gradlew build
+
+Run the tests only:
+
+./gradlew test
+
+Run the sample application:
+
+./gradlew run
 
 # Testing
 
